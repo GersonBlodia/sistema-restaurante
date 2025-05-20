@@ -1,0 +1,757 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  Administrador
+  Cocinero
+  Mesero
+  Limpieza
+  Asistente
+  RRHH
+}
+
+//Modulo de Direccion 
+model Pais {
+  idPais        Int            @id @default(autoincrement())
+  nombrePais    String         @db.VarChar(100)
+  estado        Boolean        @default(true)
+  departamentos Departamento[]
+}
+
+model Departamento {
+  idDepartamento     Int         @id @default(autoincrement())
+  idPais             Int
+  nombreDepartamento String      @db.VarChar(100)
+  estado             Boolean     @default(true)
+  pais               Pais        @relation(fields: [idPais], references: [idPais])
+  provincias         Provincia[]
+}
+
+model Provincia {
+  idProvincia     Int          @id @default(autoincrement())
+  idDepartamento  Int
+  nombreProvincia String       @db.VarChar(100)
+  estado          Boolean      @default(true)
+  departamento    Departamento @relation(fields: [idDepartamento], references: [idDepartamento])
+  distritos       Distrito[]
+}
+
+model Distrito {
+  idDistrito         Int                  @id @default(autoincrement())
+  idProvincia        Int
+  nombreDistrito     String               @db.VarChar(100)
+  estado             Boolean              @default(true)
+  provincia          Provincia            @relation(fields: [idProvincia], references: [idProvincia])
+  direccionUbicacion DireccionUbicacion[]
+}
+
+model DireccionUbicacion {
+  idDireccionUbicacion Int       @id @default(autoincrement())
+  idDistrito           Int
+  detalleUbicacion     String    @db.Text
+  estado               Boolean   @default(true)
+  distrito             Distrito  @relation(fields: [idDistrito], references: [idDistrito])
+  persona              Persona[]
+}
+
+//Modulo de persona 
+model Tipo_Documento {
+  idTipoDocumento        Int       @id @default(autoincrement())
+  nombreTipoDocumento    String    @unique @db.VarChar(50)
+  descripcion            String?   @db.VarChar(255)
+  estado                 Boolean   @default(true)
+  persona                Persona[]
+  nacionalidadAproximada String?
+}
+
+model Tipo_Documento_Adjunto {
+  idTipoDocumentoAdjunto Int                @id @default(autoincrement())
+  nombreTipo             String             @unique @db.VarChar(50) // Ejemplo: 'Pasaporte'
+  descripcion            String?            @db.VarChar(255) // Explicación
+  estado                 Boolean            @default(true)
+  documentosAdjuntos     DocumentoAdjunto[]
+}
+
+model DocumentoAdjunto {
+  idDocumentoAdjunto     Int      @id @default(autoincrement())
+  idPersona              Int
+  idTipoDocumentoAdjunto Int
+  nombreArchivo          String   @db.VarChar(255)
+  rutaArchivo            String   @db.VarChar(255)
+  fechaSubida            DateTime @default(now())
+  estado                 Boolean  @default(true)
+
+  persona              Persona                @relation(fields: [idPersona], references: [idPersona])
+  tipoDocumentoAdjunto Tipo_Documento_Adjunto @relation(fields: [idTipoDocumentoAdjunto], references: [idTipoDocumentoAdjunto])
+
+  @@index([idPersona])
+  @@index([idTipoDocumentoAdjunto])
+}
+
+model Persona {
+  idPersona            Int                 @id @default(autoincrement())
+  idDireccionUbicacion Int?
+  idTipoDocumento      Int?
+  nombre               String              @db.VarChar(100)
+  apellido             String              @db.VarChar(100)
+  dni                  Int?                @unique
+  telefono             String?             @db.Char(9)
+  genero               Genero?
+  fechaNacimiento      DateTime?
+  estado               Boolean             @default(true)
+  direccionUbicacion   DireccionUbicacion? @relation(fields: [idDireccionUbicacion], references: [idDireccionUbicacion])
+  tipoDocumento        Tipo_Documento?     @relation(fields: [idTipoDocumento], references: [idTipoDocumento])
+  empleado             Empleado?
+
+  DocumentoAdjunto DocumentoAdjunto[]
+  Pedido           Pedido[]
+  Venta            Venta[]
+}
+
+enum Genero {
+  Masculino
+  Femenino
+  Otro
+  No_Binario @map("No Binario")
+}
+
+enum DiaSemana {
+  Lunes
+  Martes
+  Miercoles @map("Miércoles")
+  Jueves
+  Viernes
+  Sabado    @map("Sábado")
+  Domingo
+}
+
+//Modulo Empleado 
+model Empleado {
+  idEmpleado           Int                    @id @default(autoincrement())
+  idPersona            Int                    @unique
+  rol                  Rol
+  horario              String?                @db.Text
+  diasTrabajo          EmpleadoDiaSemana[]
+  estado               Boolean                @default(true)
+  persona              Persona                @relation(fields: [idPersona], references: [idPersona])
+  usuario              Usuario?
+  sueldo               Float?
+  contratoInicio       DateTime? 
+  contratoFinal        DateTime?
+  InfoEmpleadoRRHH     InfoEmpleadoRRHH?
+  EvaluacionDesempeno  EvaluacionDesempeno[]
+  HistorialEmpleado    HistorialEmpleado[]
+  EmpleadoCapacitacion EmpleadoCapacitacion[]
+  Ausencia             Ausencia[]
+  // Nueva relación para el registro de movimientos
+  MovimientoInventario MovimientoInventario[]
+ 
+}
+model EmpleadoDiaSemana {
+  id         Int       @id @default(autoincrement())
+  idEmpleado Int
+  dia        DiaSemana
+
+  empleado Empleado @relation(fields: [idEmpleado], references: [idEmpleado])
+
+  @@unique([idEmpleado, dia]) // Evita duplicados del mismo día
+}
+
+
+//Modulo de RRHH 
+
+model Departamento_rrhh {
+  idDepartamentoRRHH Int              @id @default(autoincrement())
+  nombreDepartamento String           @unique
+  descripcion        String
+  estado             Boolean          @default(true)
+  Puesto_trabajo     Puesto_trabajo[]
+}
+
+model Puesto_trabajo {
+  idPuestoTrabajo    Int                @id @default(autoincrement())
+  idDepartamentoRRHH Int
+  nombrePuesto       String
+  descripcionPuesto  String
+  requisitos         String
+  estado             Boolean            @default(true)
+  Departamento_rrhh  Departamento_rrhh  @relation(fields: [idDepartamentoRRHH], references: [idDepartamentoRRHH])
+  InfoEmpleadoRRHH   InfoEmpleadoRRHH[]
+
+  // Relaciones inversas con HistorialEmpleado
+  historialAnterior HistorialEmpleado[] @relation("PuestoTrabajoAnterior")
+  historialNuevo    HistorialEmpleado[] @relation("PuestoTrabajoNuevo")
+}
+
+model InfoEmpleadoRRHH {
+  idInfoEmpleadoRRHH   Int             @id @default(autoincrement())
+  idEmpleado           Int             @unique
+  idPuestoTrabajo      Int?
+  fechaContratacion    DateTime?
+  salario              Decimal?        @db.Decimal(10, 2)
+  tipoContrato         String?         @db.VarChar(50)
+  departamentoAsignado String?         @db.VarChar(100)
+  fechaFinContrato     DateTime?
+  empleado             Empleado        @relation(fields: [idEmpleado], references: [idEmpleado])
+  Puesto_trabajo       Puesto_trabajo? @relation(fields: [idPuestoTrabajo], references: [idPuestoTrabajo])
+}
+
+model EvaluacionDesempeno {
+  idEvaluacion      Int      @id @default(autoincrement())
+  idEmpleado        Int
+  fechaEvaluacion   DateTime
+  evaluador         String?  @db.VarChar(100)
+  comentarios       String?  @db.Text
+  puntuacionGeneral Decimal? @db.Decimal(3, 2)
+  estado            Boolean  @default(true)
+
+  // Relaciones
+  empleado Empleado @relation(fields: [idEmpleado], references: [idEmpleado])
+}
+
+model HistorialEmpleado {
+  idHistorial             Int      @id @default(autoincrement())
+  idEmpleado              Int
+  fechaCambio             DateTime
+  tipoCambio              String   @db.VarChar(100)
+  descripcionCambio       String?  @db.Text
+  idPuestoTrabajoAnterior Int?
+  idPuestoTrabajoNuevo    Int?
+  salarioAnterior         Decimal? @db.Decimal(10, 2)
+  salarioNuevo            Decimal? @db.Decimal(10, 2)
+
+  // Relaciones
+  empleado              Empleado        @relation(fields: [idEmpleado], references: [idEmpleado])
+  puestoTrabajoAnterior Puesto_trabajo? @relation("PuestoTrabajoAnterior", fields: [idPuestoTrabajoAnterior], references: [idPuestoTrabajo])
+  puestoTrabajoNuevo    Puesto_trabajo? @relation("PuestoTrabajoNuevo", fields: [idPuestoTrabajoNuevo], references: [idPuestoTrabajo])
+}
+
+model Capacitacion {
+  idCapacitacion   Int       @id @default(autoincrement())
+  nombreCurso      String    @db.VarChar(100)
+  descripcionCurso String?   @db.Text
+  fechaInicio      DateTime?
+  fechaFin         DateTime?
+  estado           Boolean   @default(true)
+
+  // Relaciones inversas
+  empleadoCapacitaciones EmpleadoCapacitacion[]
+}
+
+model EmpleadoCapacitacion {
+  idEmpleadoCapacitacion Int       @id @default(autoincrement())
+  idEmpleado             Int
+  idCapacitacion         Int
+  fechaRealizacion       DateTime?
+  resultado              String?   @db.VarChar(50)
+
+  // Relaciones
+  empleado     Empleado     @relation(fields: [idEmpleado], references: [idEmpleado])
+  capacitacion Capacitacion @relation(fields: [idCapacitacion], references: [idCapacitacion])
+
+  @@unique([idEmpleado, idCapacitacion])
+}
+
+enum TipoAusencia {
+  Vacaciones
+  Permiso
+  Licencia_por_Enfermedad
+  Otro
+}
+
+enum EstadoAusencia {
+  Pendiente
+  Aprobado
+  Rechazado
+}
+
+model Ausencia {
+  idAusencia   Int            @id @default(autoincrement())
+  idEmpleado   Int
+  tipoAusencia TipoAusencia
+  fechaInicio  DateTime?
+  fechaFin     DateTime?
+  motivo       String?        @db.Text
+  estado       EstadoAusencia @default(Pendiente)
+
+  // Relaciones
+  empleado Empleado @relation(fields: [idEmpleado], references: [idEmpleado])
+}
+
+model Usuario {
+  idUsuario               Int                   @id @default(autoincrement())
+  idEmpleado              Int                   @unique
+  correo                  String                @unique @db.VarChar(150)
+  userName                String?               @unique @db.VarChar(100)
+  contrasena              String                @db.Text
+  isActive                Boolean               @default(false)
+  verificationToken       String?               @unique
+  verificationTokenExpiry DateTime? // Nueva columna para la expiración del token
+  estado                  Boolean               @default(true)
+  resetPasswordToken      String?               @unique // Token para restablecimiento de contraseña
+  resetPasswordExpires    DateTime? // Fecha de expiración del token de restablecimiento
+  resetRequestedIp        String? // IP desde la que se solicitó el restablecimiento
+  resetRequestedUserAgent String? // User-Agent del dispositivo
+  empleado                Empleado              @relation(fields: [idEmpleado], references: [idEmpleado])
+  mensajeInternoEnviado   MensajeInterno[]      @relation("Remitente")
+  mensajeInternoRecibido  MensajeInterno[]      @relation("Destinatario")
+  notificacion            Notificacion[]
+  mensajeChatEnviado      MensajeChat[]         @relation("Remitente")
+  mensajeChatRecibido     MensajeChat[]         @relation("Receptor")
+  Pedido                  Pedido[]
+  LogUsuario              LogUsuario[]
+  Venta                   Venta[]
+  // Nueva relación para el control de inventario
+  InventarioAuditoria     InventarioAuditoria[]
+
+  @@index([resetPasswordToken]) // Índice para acelerar las búsquedas por el token
+}
+
+model MensajeInterno {
+  idMensaje      Int      @id @default(autoincrement())
+  idRemitente    Int?
+  idDestinatario Int?
+  asunto         String?  @db.VarChar(150)
+  contenido      String?  @db.Text
+  fechaEnvio     DateTime @default(now()) @db.Timestamp(0)
+  leido          Boolean  @default(true)
+  estado         Boolean  @default(true)
+  remitente      Usuario? @relation("Remitente", fields: [idRemitente], references: [idUsuario])
+  destinatario   Usuario? @relation("Destinatario", fields: [idDestinatario], references: [idUsuario])
+}
+
+model Notificacion {
+  idNotificacion Int      @id @default(autoincrement())
+  idUsuario      Int?
+  correo         String
+  mensaje        String?  @db.Text
+  tipo           String?  @db.VarChar(50)
+  fecha          DateTime @default(now()) @db.Timestamp(0)
+  leido          Boolean  @default(true)
+  estado         Boolean  @default(true)
+  usuario        Usuario? @relation(fields: [idUsuario], references: [idUsuario])
+}
+
+model MensajeChat {
+  idMensaje   Int      @id @default(autoincrement())
+  idRemitente Int?
+  idReceptor  Int?
+  contenido   String?  @db.Text
+  fechaEnvio  DateTime @default(now()) @db.Timestamp(0)
+  estado      Boolean  @default(true)
+  remitente   Usuario? @relation("Remitente", fields: [idRemitente], references: [idUsuario])
+  receptor    Usuario? @relation("Receptor", fields: [idReceptor], references: [idUsuario])
+}
+
+// ****** MÓDULO DE INVENTARIO Y PROVEEDORES ******
+
+model Tipo_proveedor {
+  idTipoProveedor Int           @id @default(autoincrement())
+  nombreTipo      String        @db.VarChar(100)
+  descripcion     String?       @db.Text
+  estado          Boolean       @default(true)
+  proveedores     Proveedores[]
+}
+
+model Proveedores {
+  idProveedores    Int             @id @default(autoincrement())
+  idTipoProveedor  Int?
+  nombreProveedor  String          @db.VarChar(100)
+  ruc              String?         @db.VarChar(15)
+  telefono         String?         @db.Char(9)
+  correo           String?         @db.VarChar(150)
+  direccion        String?         @db.Text
+  personaContacto  String?         @db.VarChar(100)
+  telefonoContacto String?         @db.Char(9)
+  estado           Boolean         @default(true)
+  // Relaciones
+  tipoProveedor    Tipo_proveedor? @relation(fields: [idTipoProveedor], references: [idTipoProveedor])
+  ordenesCompra    OrdenCompra[]
+  insumo           Insumo[]
+  inventario       Inventario[]
+}
+
+// Nueva tabla para órdenes de compra
+model OrdenCompra {
+  idOrdenCompra Int                  @id @default(autoincrement())
+  idProveedor   Int
+  numeroOrden   String               @db.VarChar(20)
+  fechaEmision  DateTime             @default(now())
+  fechaEntrega  DateTime?
+  estado        EstadoOrden          @default(Pendiente)
+  observaciones String?              @db.Text
+  montoTotal    Decimal              @db.Decimal(10, 2)
+  // Relaciones
+  proveedor     Proveedores          @relation(fields: [idProveedor], references: [idProveedores])
+  detallesOrden DetalleOrdenCompra[]
+}
+
+enum EstadoOrden {
+  Pendiente
+  Parcial
+  Completada
+  Cancelada
+}
+
+// Detalle de órdenes de compra
+model DetalleOrdenCompra {
+  idDetalleOrden   Int         @id @default(autoincrement())
+  idOrdenCompra    Int
+  idInsumo         Int
+  cantidad         Decimal     @db.Decimal(10, 2)
+  precioUnitario   Decimal     @db.Decimal(10, 2)
+  subtotal         Decimal     @db.Decimal(10, 2)
+  cantidadRecibida Decimal?    @db.Decimal(10, 2)
+  // Relaciones
+  ordenCompra      OrdenCompra @relation(fields: [idOrdenCompra], references: [idOrdenCompra])
+  insumo           Insumo      @relation(fields: [idInsumo], references: [idInsumo])
+}
+
+model Tipo_insumo {
+  idTipoInsumo Int      @id @default(autoincrement())
+  nombreTipo   String   @db.VarChar(100)
+  descripcion  String?  @db.Text
+  estado       Boolean  @default(true)
+  insumo       Insumo[]
+}
+
+// Unidades de medida estandarizadas para insumos
+model UnidadMedida {
+  idUnidadMedida Int      @id @default(autoincrement())
+  nombre         String   @db.VarChar(50) // kg, g, litro, unidad, etc.
+  abreviatura    String   @db.VarChar(10) // kg, g, l, u, etc.
+  descripcion    String?  @db.Text
+  estado         Boolean  @default(true)
+  // Relaciones
+  insumos        Insumo[]
+}
+
+model Insumo {
+  idInsumo         Int      @id @default(autoincrement())
+  idTipoInsumo     Int
+  idProveedor      Int?
+  idUnidadMedida   Int
+  codigoInsumo     String?  @db.VarChar(50) // Código único para inventario
+  nombreInsumo     String   @db.VarChar(100)
+  descripcion      String?  @db.Text
+  imagenInsumo     String?  @db.VarChar(255)
+  stock            Decimal  @db.Decimal(10, 2) // Stock actual
+  stockMinimo      Decimal  @db.Decimal(10, 2) // Cantidad mínima antes de alertar
+  precio           Decimal  @db.Decimal(10, 2) // Precio de compra
+  ubicacionAlmacen String?  @db.VarChar(100) // Ubicación física en almacén
+  fechaRegistro    DateTime @default(now())
+  estado           Boolean  @default(true)
+
+  // Relaciones
+  tipoInsumo            Tipo_insumo            @relation(fields: [idTipoInsumo], references: [idTipoInsumo])
+  unidadMedida          UnidadMedida           @relation(fields: [idUnidadMedida], references: [idUnidadMedida])
+  proveedor             Proveedores?           @relation(fields: [idProveedor], references: [idProveedores])
+  movimientosInventario MovimientoInventario[]
+  inventario            Inventario[]
+  detallesOrdenCompra   DetalleOrdenCompra[]
+  mermas                Merma[]
+  recetasIngredientes   RecetaIngrediente[]
+}
+
+// Nueva tabla para el control de inventario físico
+model Inventario {
+  idInventario   Int       @id @default(autoincrement())
+  idInsumo       Int
+  idProveedor    Int?
+  lote           String?   @db.VarChar(50) // Número de lote
+  cantidad       Decimal   @db.Decimal(10, 2)
+  fechaIngreso   DateTime  @default(now())
+  fechaCaducidad DateTime?
+  precioCompra   Decimal   @db.Decimal(10, 2)
+  facturaCompra  String?   @db.VarChar(50) // Número de factura
+  ubicacion      String?   @db.VarChar(100) // Ubicación específica en almacén
+  observaciones  String?   @db.Text
+  estado         Boolean   @default(true) // Activo o no
+
+  // Relaciones
+  insumo    Insumo       @relation(fields: [idInsumo], references: [idInsumo])
+  proveedor Proveedores? @relation(fields: [idProveedor], references: [idProveedores])
+}
+
+// Nueva tabla para auditoría de inventario
+model InventarioAuditoria {
+  idAuditoria    Int      @id @default(autoincrement())
+  idUsuario      Int
+  fechaAuditoria DateTime @default(now())
+  tipoAuditoria  String   @db.VarChar(50) // "Completa", "Parcial", "Específica"
+  observaciones  String?  @db.Text
+  resultado      String?  @db.Text // Resultados generales
+
+  // Relaciones
+  usuario           Usuario                      @relation(fields: [idUsuario], references: [idUsuario])
+  detallesAuditoria DetalleAuditoriaInventario[]
+}
+
+// Detalles de cada auditoría
+model DetalleAuditoriaInventario {
+  idDetalleAuditoria Int     @id @default(autoincrement())
+  idAuditoria        Int
+  idInsumo           Int
+  stockSistema       Decimal @db.Decimal(10, 2)
+  stockFisico        Decimal @db.Decimal(10, 2)
+  diferencia         Decimal @db.Decimal(10, 2)
+  observaciones      String? @db.Text
+
+  // Relaciones
+  auditoria InventarioAuditoria @relation(fields: [idAuditoria], references: [idAuditoria])
+}
+
+// Nueva tabla para movimientos de inventario (entradas/salidas)
+model MovimientoInventario {
+  idMovimiento    Int            @id @default(autoincrement())
+  idInsumo        Int
+  idEmpleado      Int
+  tipoMovimiento  TipoMovimiento
+  cantidad        Decimal        @db.Decimal(10, 2)
+  fechaMovimiento DateTime       @default(now())
+  idReferencia    Int? // ID de pedido, venta u otra referencia
+  tipoReferencia  String?        @db.VarChar(50) // "Pedido", "Venta", "Ajuste", etc.
+  motivo          String?        @db.Text
+  observaciones   String?        @db.Text
+
+  // Relaciones
+  insumo   Insumo   @relation(fields: [idInsumo], references: [idInsumo])
+  empleado Empleado @relation(fields: [idEmpleado], references: [idEmpleado])
+}
+
+enum TipoMovimiento {
+  Entrada
+  Salida
+  Ajuste
+  Merma
+  Transferencia
+}
+
+// Nueva tabla para mermas y desperdicios
+model Merma {
+  idMerma       Int      @id @default(autoincrement())
+  idInsumo      Int
+  cantidad      Decimal  @db.Decimal(10, 2)
+  fecha         DateTime @default(now())
+  motivo        String   @db.VarChar(100) // "Caducidad", "Daño", "Preparación", etc.
+  descripcion   String?  @db.Text
+  costoEstimado Decimal? @db.Decimal(10, 2)
+
+  // Relaciones
+  insumo Insumo @relation(fields: [idInsumo], references: [idInsumo])
+}
+
+// ****** MÓDULO DE PRODUCTOS Y MENÚ ******
+
+model Tipo_producto {
+  idTipoProducto Int        @id @default(autoincrement())
+  nombreTipo     String     @db.VarChar(100)
+  descripcion    String?    @db.Text
+  estado         Boolean    @default(true)
+  producto       Producto[]
+}
+
+model Producto {
+  idProducto     Int     @id @default(autoincrement())
+  idTipoProducto Int
+  codigoProducto String? @db.VarChar(50)
+  nombreProducto String  @db.VarChar(100)
+  descripcion    String? @db.Text
+  precio         Decimal @db.Decimal(10, 2)
+  stock          Int
+  imagen         String? @db.VarChar(255)
+  estado         Boolean @default(true)
+
+  // Relaciones
+  tipoProducto Tipo_producto @relation(fields: [idTipoProducto], references: [idTipoProducto])
+  pedidos      Pedido[]
+}
+
+model Tipo_platillo {
+  idTipoPlatillo Int     @id @default(autoincrement())
+  nombreTipo     String  @db.VarChar(100)
+  descripcion    String? @db.Text
+  estado         Boolean @default(true)
+  Menu           Menu[]
+}
+
+model Menu {
+  idMenu            Int     @id @default(autoincrement())
+  idTipoPlatillo    Int
+  nombreMenu        String  @db.VarChar(100)
+  descripcion       String? @db.Text
+  imagenMenu        String? @db.VarChar(255)
+  precio            Decimal @db.Decimal(10, 2)
+  tiempoPreparacion Int? // Tiempo estimado en minutos
+  estado            Boolean @default(true)
+
+  // Relaciones
+  tipoPlatillo       Tipo_platillo       @relation(fields: [idTipoPlatillo], references: [idTipoPlatillo])
+  detallePedidos     DetallePedido[]
+  pedidos            Pedido[]
+  recetaIngredientes RecetaIngrediente[]
+}
+
+// Nueva tabla de relación entre menú e insumos (Receta)
+model RecetaIngrediente {
+  idReceta      Int     @id @default(autoincrement())
+  idMenu        Int
+  idInsumo      Int
+  cantidad      Decimal @db.Decimal(10, 2)
+  observaciones String? @db.Text
+
+  // Relaciones
+  menu   Menu   @relation(fields: [idMenu], references: [idMenu])
+  insumo Insumo @relation(fields: [idInsumo], references: [idInsumo])
+
+  @@unique([idMenu, idInsumo])
+}
+
+// ****** MÓDULO DE PEDIDOS Y VENTAS ******
+
+enum EstadoPedido {
+  Pendiente
+  EnPreparacion
+  Listo
+  Entregado
+  Cancelado
+}
+
+model Pedido {
+  idPedido      Int          @id @default(autoincrement())
+  idUsuario     Int? // Empleado que registra
+  idPersona     Int? // Cliente
+  idMenu        Int? // Si es un menú específico
+  idProducto    Int? // Si es un producto específico
+  numeroPedido  String?      @db.VarChar(20)
+  fechaPedido   DateTime     @default(now())
+  horaEntrega   DateTime?
+  observaciones String?      @db.Text
+  estadoPedido  EstadoPedido @default(Pendiente)
+  mesa          String?      @db.VarChar(10)
+  esParaLlevar  Boolean      @default(false)
+  estado        Boolean      @default(true)
+
+  // Relaciones
+  usuario        Usuario?        @relation(fields: [idUsuario], references: [idUsuario])
+  persona        Persona?        @relation(fields: [idPersona], references: [idPersona])
+  menu           Menu?           @relation(fields: [idMenu], references: [idMenu])
+  producto       Producto?       @relation(fields: [idProducto], references: [idProducto])
+  detallesPedido DetallePedido[]
+
+  ventas Venta[]
+}
+
+model DetallePedido {
+  idDetallePedido Int      @id @default(autoincrement())
+  idPedido        Int
+  idMenu          Int?
+  cantidad        Int
+  precio          Decimal  @db.Decimal(10, 2)
+  subtotal        Decimal  @db.Decimal(10, 2)
+  descuento       Decimal? @db.Decimal(10, 2)
+  observaciones   String?  @db.Text
+  estado          Boolean  @default(true)
+
+  // Relaciones
+  pedido Pedido @relation(fields: [idPedido], references: [idPedido])
+  menu   Menu?  @relation(fields: [idMenu], references: [idMenu])
+}
+
+model Tipo_pago {
+  idTipoPago  Int     @id @default(autoincrement())
+  nombreTipo  String  @db.VarChar(100)
+  descripcion String? @db.Text
+  estado      Boolean @default(true)
+  Pago        Pago[]
+}
+
+model Pago {
+  idPago Int @id @default(autoincrement())
+
+  idTipoPago Int
+  monto      Decimal  @db.Decimal(10, 2)
+  referencia String?  @db.VarChar(100) // Número de transacción
+  fechaPago  DateTime @default(now())
+  estado     Boolean  @default(true)
+
+  tipoPago Tipo_pago @relation(fields: [idTipoPago], references: [idTipoPago])
+  Venta    Venta[]
+}
+
+model Venta {
+  idVenta     Int      @id @default(autoincrement())
+  idPedido    Int
+  idUsuario   Int
+  idPersona   Int?
+  idPago      Int?
+  numeroVenta String?  @db.VarChar(20)
+  fechaVenta  DateTime @default(now())
+  subtotal    Decimal  @db.Decimal(10, 2)
+  igv         Decimal  @db.Decimal(10, 2)
+  descuento   Decimal? @db.Decimal(10, 2)
+  total       Decimal  @db.Decimal(10, 2)
+  estado      Boolean  @default(true)
+
+  // Relaciones
+  pago         Pago?         @relation(fields: [idPago], references: [idPago])
+  persona      Persona?      @relation(fields: [idPersona], references: [idPersona])
+  pedido       Pedido        @relation(fields: [idPedido], references: [idPedido])
+  usuario      Usuario       @relation(fields: [idUsuario], references: [idUsuario])
+  comprobantes Comprobante[]
+}
+
+model Tipo_comprobante {
+  idTipoComprobante Int           @id @default(autoincrement())
+  nombreTipo        String        @db.VarChar(100) // "Boleta", "Factura", etc.
+  descripcion       String?       @db.Text
+  serieActual       String?       @db.VarChar(10)
+  correlativoActual Int?
+  estado            Boolean       @default(true)
+  comprobantes      Comprobante[]
+}
+
+model Comprobante {
+  idComprobante      Int      @id @default(autoincrement())
+  idVenta            Int
+  idTipoComprobante  Int
+  serie              String   @db.VarChar(10)
+  correlativo        Int
+  fechaEmision       DateTime @default(now())
+  rucEmisor          String?  @db.VarChar(20)
+  razonSocialEmisor  String?  @db.VarChar(200)
+  rucCliente         String?  @db.VarChar(20)
+  razonSocialCliente String?  @db.VarChar(200)
+  direccionCliente   String?  @db.VarChar(200)
+  subtotal           Decimal  @db.Decimal(10, 2)
+  igv                Decimal  @db.Decimal(10, 2)
+  total              Decimal  @db.Decimal(10, 2)
+  estado             Boolean  @default(true)
+
+  // Relaciones
+  venta           Venta            @relation(fields: [idVenta], references: [idVenta])
+  tipoComprobante Tipo_comprobante @relation(fields: [idTipoComprobante], references: [idTipoComprobante])
+
+  @@unique([serie, correlativo, idTipoComprobante])
+}
+
+// Registros de actividad del sistema
+model LogUsuario {
+  idLog     Int      @id @default(autoincrement())
+  idUsuario Int?
+  accion    String?  @db.Text
+  tabla     String?  @db.VarChar(100) // Tabla afectada
+  fechaHora DateTime @default(now())
+  ip        String?  @db.VarChar(50)
+  detalles  String?  @db.Text
+  estado    Boolean  @default(true)
+
+  // Relaciones
+  usuario Usuario? @relation(fields: [idUsuario], references: [idUsuario])
+}
