@@ -58,4 +58,14 @@ Este proyecto cuenta con un archivo seed.ts para insertar datos de prueba autom�
     Documentación de PostgreSQL
 
     Documentación de Vercel
+Cree un archivo en la raiz del proyecto llamado .env 
+con estos valores
+
+DATABASE_URL="postgresql://postgres:root@localhost:5432/dbRestaurante"
+
+EMAIL_USER=esthefanysarmiento66@gmail.com
+EMAIL_PASS=zzbgrgjmjbxnmhmt
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+AUTH_SECRET="G9ciBjfcaw5rSwy2vwtI3H+MnWthJPbhNy5I91tkrro="
+
 
