@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+📦 Guía para Ejecutar el Proyecto - Next.js
 
-## Getting Started
+Este proyecto ha sido creado con create-next-app y utiliza Next.js, Node.js, Prisma y PostgreSQL como base de datos.
+✅ Requisitos previos
 
-First, run the development server:
+Antes de ejecutar el proyecto, asegúrese de tener instalado:
 
-```bash
+    Node.js: Descargar Node.js
+
+    PostgreSQL: Descargar PostgreSQL
+
+    Git (opcional, para clonar el repositorio)
+
+🛠️ Pasos para levantar el proyecto
+
+    Clonar el repositorio (si aplica)
+
+git clone <url-del-repositorio>
+cd <nombre-del-proyecto>
+
+    Instalar dependencias
+
+npm install
+# o
+yarn install
+
+    Configurar la base de datos PostgreSQL
+
+    Crear una base de datos en PostgreSQL.
+
+    Configurar las variables de entorno en un archivo .env (el archivo .env.example puede servir de guía):
+
+DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/nombre_de_la_bd"
+
+    Ejecutar migraciones e insertar datos semilla
+
+npx prisma migrate dev
+npx prisma db seed
+
+Esto creará las tablas necesarias y poblará la base de datos con datos iniciales para pruebas.
+
+    Levantar el servidor de desarrollo
+
 npm run dev
-# or
+# o
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Luego abre http://localhost:3000 en tu navegador para ver el resultado.
+🧪 Datos de prueba
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Este proyecto cuenta con un archivo seed.ts para insertar datos de prueba automáticamente en la base de datos. Esto permite probar las funcionalidades del sistema sin necesidad de registrar manualmente datos.
+📚 Recursos útiles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    Documentación de Next.js
 
-## Learn More
+    Documentación de Prisma
 
-To learn more about Next.js, take a look at the following resources:
+    Documentación de PostgreSQL
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    Documentación de Vercel
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
